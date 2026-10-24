@@ -152,6 +152,11 @@ def run(drafts: bool = False, use_claude: bool = False) -> Store:
     print(f"\n--- AI Agent stats ---\n  sent by agent: {s.sent_by_agent} | meetings booked: {s.meetings_booked}"
           f" | auto-handled: {s.auto_handled} | open questions: {s.open_questions}"
           f" | archived: {s.archived_by_reason}")
+    from autopilot.ledger import funnel, summary_line
+    fn = funnel(store, clock.now(), "job_be")
+    print(f"\n--- Conversion ledger ---\n  {summary_line(fn)}")
+    for leak in fn.leaks:
+        print(f"  leak: {leak.candidate} lost at {leak.stage_before} ({leak.reason})")
     alice = store.card_for_thread(threads["alice"])
     print("\n--- Inbox timeline: Alice ---\n" + render_timeline(store, alice))
     print("\n--- Knowledge learned ---")
