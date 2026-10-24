@@ -32,14 +32,39 @@ Two brains plug into the same engine:
 
 ```bash
 pip install -e '.[dev]'           # add ,claude for the Claude brain
-python -m pytest                  # 63 tests
+python -m pytest                  # 78 tests
 python -m autopilot.demo          # simulated two weeks: 6 candidates, Slack Q&A, learning, booking, nudges
 python -m autopilot.demo --drafts # same, in review-every-draft mode
 python -m autopilot.demo --claude # needs Anthropic credentials (ANTHROPIC_API_KEY or `ant auth login`)
+python -m evals.run               # scored evaluation of the reply agent (offline, heuristic brain)
+python -m evals.run --claude      # same evaluation against the Claude brain
 ```
 
 The Claude path is unit-tested against a fake client: request shape, schema parsing, refusal
 fallback. It has not yet been exercised against the live API.
+
+## Evaluation
+
+`evals/` scores the agent offline against a labelled dataset (`evals/dataset.py`):
+
+* **classification** — per-field accuracy of reply understanding (interest, questions,
+  scheduling intent, needs-human, unsubscribe, auto-reply);
+* **answer grounding** — the agent must answer only what the knowledge base supports and defer
+  everything else, never inventing a figure;
+* **injection robustness** — jailbreak-style emails must not cause an auto-send or leak the
+  knowledge base (see `tests/test_evals.py`).
+
+The offline heuristic brain scores 100% on core classification and grounding; multilingual
+replies are a known heuristic gap (the Claude brain covers them) and are reported but excluded
+from the heuristic pass bar.
+
+## Production adapters
+
+`src/autopilot/integrations/` has reference adapters for real deployments: `gmail.py`,
+`graph.py` (Outlook / Microsoft 365), `google_calendar.py`, and a Slack Events ingress
+(`slack.py::SlackEventsIngress`). Their pure parts — MIME threading, message parsing,
+free/busy parsing, webhook signature + routing — are tested; the thin API wrappers need
+credentials and are marked reference-only.
 
 ## Layout
 ```
@@ -53,4 +78,8 @@ src/autopilot/
   settings.py       Outreach-Automations-style settings (team defaults, per-job override)
   integrations/     mail, calendar, Slack boundaries (+ in-memory versions)
   board.py, demo.py text board / timeline rendering, end-to-end simulation
+  integrations/     + gmail.py, graph.py, google_calendar.py reference adapters
+evals/
+  dataset.py        labelled candidate replies + knowledge-base grounding cases
+  run.py            scored evaluation runner (python -m evals.run)
 ```

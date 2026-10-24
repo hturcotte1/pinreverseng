@@ -17,8 +17,11 @@ from autopilot.models import Company, Job
 TOPIC_TERMS: dict[str, set[str]] = {
     "compensation": {"salary", "pay", "comp", "compensation", "range", "base", "bonus", "equity",
                      "stock", "options", "rsu", "rsus", "ote", "commission", "money", "paying", "$"},
-    "benefits": {"benefits", "health", "insurance", "dental", "401k", "pto", "vacation", "leave",
-                 "parental", "maternity", "paternity", "holidays", "perks"},
+    "benefits": {"benefits", "perks", "perk", "package"},
+    "health": {"health", "insurance", "dental", "medical", "vision", "healthcare"},
+    "retirement": {"401k", "pension", "retirement", "match"},
+    "pto": {"pto", "vacation", "leave", "parental", "maternity", "paternity", "holidays", "sabbatical",
+            "time-off"},
     "location": {"remote", "hybrid", "office", "onsite", "on-site", "location", "based", "in-office",
                  "commute", "wfh", "where"},
     "relocation": {"relocate", "relocation", "relocating", "moving", "move"},

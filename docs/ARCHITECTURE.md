@@ -64,12 +64,19 @@ flowchart TD
   base) marked `cache_control`; the volatile thread comes after it.
 * Candidate text is fenced in `<candidate_email>` and `<thread>` and labelled untrusted.
 
-## Production adapters to add
-* `MailProvider`: Gmail (`users.drafts.create` / `users.messages.send` with `threadId` and
-  `In-Reply-To`/`References`) or Microsoft Graph (`createReply` / `send`), plus push-based
-  mailbox sync calling `handle_inbound`, `approve_draft` (when a draft we wrote is sent) and
-  `record_human_reply`.
-* `Calendar`: Google `freeBusy.query` + `events.insert`, or Graph `getSchedule` + `events`.
-* `Store`: a database. `tick()` becomes a scheduled worker; outbox sends become a job queue.
-* Slack: an Events API endpoint that verifies signatures (`verify_slack_signature`), extracts
-  thread replies (`thread_reply_from_event`) and calls `on_slack_reply`.
+## Production adapters
+
+Reference adapters live in `src/autopilot/integrations/`. Their pure parts are tested
+(`tests/test_adapters.py`); the thin API wrappers need credentials and are marked
+reference-only.
+
+* `MailProvider`: `gmail.py` (`users.drafts.create` / `users.messages.send` with `threadId`
+  and `In-Reply-To`/`References` built by `build_mime`) and `graph.py` (`createReply` / `send`,
+  with `parse_graph_message`). A deployment adds push-based mailbox sync that calls
+  `handle_inbound`, `approve_draft` (when a draft we wrote is sent) and `record_human_reply`.
+* `Calendar`: `google_calendar.py` (`freeBusy.query` + `events.insert`, with `parse_freebusy`
+  and `event_body`).
+* Slack: `SlackEventsIngress` verifies signatures, answers the handshake, de-dupes retries, and
+  routes a recruiter's thread reply to `on_slack_reply`.
+* `Store`: swap the in-memory store for a database. `tick()` becomes a scheduled worker; outbox
+  sends become a job queue.

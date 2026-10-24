@@ -12,7 +12,7 @@ import json
 import time
 import urllib.request
 from dataclasses import dataclass, field
-from typing import Any, Protocol
+from typing import Any, Callable, Protocol
 
 from autopilot.models import OpenQuestion, Recruiter
 
@@ -104,3 +104,42 @@ def thread_reply_from_event(payload: dict) -> tuple[str, str] | None:
     if not thread_ts or thread_ts == event.get("ts"):
         return None
     return f"{event['channel']}:{thread_ts}", event.get("text", "").strip()
+
+
+@dataclass
+class SlackEventsIngress:
+    """Framework-agnostic Slack Events API ingress.
+
+    Wire `handle(headers, raw_body)` to your HTTP route. It verifies the request
+    signature, answers the url_verification handshake, de-duplicates retried deliveries
+    by event id, and routes a recruiter's DM-thread reply to `on_answer(ref, text)`
+    (normally `Autopilot.on_slack_reply`). Returns (status_code, body) for the HTTP layer.
+    """
+
+    signing_secret: str
+    on_answer: "Callable[[str, str], object]"
+    _seen: set[str] = field(default_factory=set)
+
+    def handle(self, headers: dict[str, str], raw_body: bytes, now: float | None = None) -> tuple[int, str]:
+        h = {k.lower(): v for k, v in headers.items()}
+        ts = h.get("x-slack-request-timestamp", "")
+        sig = h.get("x-slack-signature", "")
+        if not verify_slack_signature(self.signing_secret, ts, raw_body, sig, now=now):
+            return 401, "bad signature"
+        try:
+            payload = json.loads(raw_body)
+        except (ValueError, TypeError):
+            return 400, "bad json"
+        if payload.get("type") == "url_verification":
+            return 200, payload.get("challenge", "")
+        event_id = payload.get("event_id")
+        if event_id:
+            if event_id in self._seen:  # Slack retries deliveries; process each once
+                return 200, "duplicate"
+            self._seen.add(event_id)
+        parsed = thread_reply_from_event(payload)
+        if parsed:
+            ref, text = parsed
+            if text:
+                self.on_answer(ref, text)
+        return 200, "ok"

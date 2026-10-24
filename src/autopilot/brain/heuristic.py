@@ -40,20 +40,22 @@ NOT_NOW = _rx(r"not (right )?now|not at the moment|maybe (later|in the future|do
               r"ping me (in|after|next)|in a few months|next (quarter|year)|after the holidays|"
               r"not a good time|timing isn'?t right|bad timing|just started (a )?(new )?(job|role)")
 NOT_INTERESTED = _rx(r"not interested|no,? thanks|no thank you|not looking|happy (where i am|in my current|"
-                     r"at my current)|i'?ll pass|going to pass|not for me|not a (good )?fit|"
+                     r"at my current)|i'?ll pass|going to pass|not for me|(isn'?t|not) a (good )?fit|"
                      r"not open to|staying (at|with|put)|accepted (another|a different) (offer|role|position)")
 INTERESTED = _rx(r"interested|sounds (great|good|interesting|exciting)|(love|like) to (chat|talk|learn|hear)|"
                  r"happy to (chat|talk|connect|learn|hop)|open to|tell me more|keen|let'?s (chat|talk|connect)|"
                  r"count me in|\byes\b|\bsure\b|definitely|i'?m in\b|excited")
 NEEDS_HUMAN = _rx(r"(speak|talk) (to|with) (a )?(real |actual )?(person|human)|are you (a )?(bot|ai|robot)|"
-                  r"lawyer|attorney|discriminat|harass|complain|counter ?offer|negotiat|competing offer|"
-                  r"another offer")
+                  r"(talking|speaking) to (a )?(bot|ai|robot|real person|human|someone real)|bot or a real|"
+                  r"lawyer|attorney|non-?compete|discriminat|harass|complain|counter ?offer|negotiat|"
+                  r"competing offer|another offer|match (it|that|my)")
 RESCHEDULE = _rx(r"reschedul|move (our|the) (call|meeting|interview|chat)|push (it|our|the) (back|call|meeting)|"
                  r"something came up|need to change (the )?time")
 CANCEL = _rx(r"\bcancel")
 LINK = _rx(r"(send|share) (me )?(a |your )?(calendar |booking |scheduling )?link|calendly|booking page")
 DECLINE_SLOTS = _rx(r"none of (those|these|them)|(those|these) (don'?t|do not|won'?t) work|can'?t make (any|those)")
-ANY_SLOT = _rx(r"any of (those|these|them) (work|are fine|is fine)|either (works|is fine)|whichever|all (work|good)")
+ANY_SLOT = _rx(r"any of (those|these|them)( times| slots| options)? (work|are fine|is fine|is good|work for me)|"
+               r"either (works|is fine)|whichever|all (work|good|fine)|any (of them |of those )?work")
 NEEDS_VISA = _rx(r"(need|require|would need|will need)[^.?!]{0,30}(sponsor|visa)")
 NEEDS_REMOTE = _rx(r"(only|need|require|must)[^.?!]{0,30}(fully )?remote")
 NEGATIVE = _rx(r"\b(no|not|cannot|can'?t|unable|don'?t|do not|isn'?t)\b")
@@ -67,13 +69,16 @@ _WEEKDAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday",
 _WEEKDAY_RX = _rx(r"\b(mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun)(day|nesday|rsday|urday)?\b|\btomorrow\b")
 _TIME_RX = _rx(r"\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b")
 _LEAD_IN = _rx(r"^((also|and|plus|oh|so|but|lastly|finally|one more thing|quick question)[,:]?\s+)+")
+_INFO_REQUEST = _rx(r"\b(tell me (more|about)|let me know (about|more)|would (love|like) to (know|hear|learn)|"
+                    r"curious (about|to hear|to know)|fill me in|share more|more (details|info|information))\b")
 _MONTHS = ["january", "february", "march", "april", "may", "june", "july", "august",
            "september", "october", "november", "december"]
 
 TOPIC_LABELS = {
     "compensation": "compensation", "benefits": "benefits", "location": "location and work setup",
     "process": "the interview process", "team": "the team", "visa": "visa sponsorship",
-    "relocation": "relocation support",
+    "relocation": "relocation support", "health": "health benefits", "retirement": "the retirement plan",
+    "pto": "time off and leave",
     "company": "the company", "role": "the role", "travel": "travel", "start_date": "start date",
 }
 
@@ -128,7 +133,8 @@ class HeuristicBrain:
         """Questions that need an answer - not 'maybe reach out in March?' or 'does Tue 2pm work?'."""
         out = []
         for sentence in _sentences(text):
-            if not sentence.endswith("?"):
+            is_q = sentence.endswith("?") or _INFO_REQUEST.search(sentence)
+            if not is_q:
                 continue
             if NOT_NOW.search(sentence) or LINK.search(sentence) or _WEEKDAY_RX.search(sentence) \
                     or _TIME_RX.search(sentence):
