@@ -58,6 +58,7 @@ class Recruiter:
     email: str
     timezone: str = "America/New_York"
     slack_user_id: str | None = None
+    style: object | None = None  # autopilot.voice.StyleProfile, calibrated from sent messages
 
     @property
     def first_name(self) -> str:

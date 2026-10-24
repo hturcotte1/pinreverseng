@@ -140,6 +140,11 @@ class ClaudeBrain:
         extra = (f"\n<plan>\n{json.dumps(plan_json, indent=1, sort_keys=True)}\n</plan>\n"
                  f"Recruiter first name: {ctx.recruiter.first_name}\n"
                  f"Candidate first name: {ctx.candidate.first_name}")
+        style = getattr(ctx.recruiter, "style", None)
+        if style is not None:
+            from autopilot.voice import style_guide
+
+            extra += f"\n<voice>\n{style_guide(style)}\n</voice>"
         try:
             data = self._call(COMPOSE_SYSTEM, [self._job_block(ctx), self._conversation_block(ctx, extra)],
                               COMPOSE_SCHEMA, self.compose_effort)

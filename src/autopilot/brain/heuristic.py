@@ -24,6 +24,7 @@ from autopilot.brain.base import (
 from autopilot.brain.text import detect_timezone, strip_quoted
 from autopilot.insights import OBJECTION_LABELS, assess_at_risk, detect_objections, sentiment_trend
 from autopilot.knowledge import topics_of
+from autopilot.voice import DEFAULT_STYLE
 from autopilot.models import Interest
 
 
@@ -407,7 +408,10 @@ class HeuristicBrain:
 
     @staticmethod
     def _wrap(ctx: ConversationContext, lines: list[str]) -> str:
-        return f"Hi {ctx.candidate.first_name},\n\n" + "\n".join(lines) + f"\n\nBest,\n{ctx.recruiter.first_name}"
+        style = getattr(ctx.recruiter, "style", None) or DEFAULT_STYLE
+        greeting = style.render_greeting(ctx.candidate.first_name)
+        signoff = style.render_signoff(ctx.recruiter.first_name)
+        return f"{greeting}\n\n" + "\n".join(lines) + f"\n\n{signoff}"
 
     def distill_fact(self, ctx: ConversationContext, question: str, answer: str) -> DistilledFact:
         if re.search(r"don'?t (tell|share)|internal only|confidential|between us|off the record", answer, re.I):
