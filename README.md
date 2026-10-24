@@ -9,6 +9,7 @@ A public-source teardown of **Pin's Autopilot** (an AI recruiting reply agent la
 * [`docs/BLACKBOX_TEST_PLAN.md`](docs/BLACKBOX_TEST_PLAN.md): 24 experiments to settle the open
   questions by using the product normally on your own account.
 * [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md): how this implementation works.
+* [`docs/METHOD_AND_BOUNDARIES.md`](docs/METHOD_AND_BOUNDARIES.md): what was and was not done, and why.
 
 **Method.** Only publicly available material was used. No login, decompilation, API probing or
 scraping. The repository contains no Pin code or content and is not affiliated with Pin.
