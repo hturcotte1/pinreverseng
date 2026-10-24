@@ -19,7 +19,7 @@ import random
 from datetime import date, datetime, time, timedelta
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from autopilot import flightplan, guardrails
+from autopilot import flightplan, governor, guardrails
 from autopilot.insights import HARD_OBJECTIONS, OBJECTION_LABELS, SOFT_OBJECTIONS
 from autopilot.brain.base import (
     NOTE_SLOT_TAKEN,
@@ -438,7 +438,8 @@ class Autopilot:
         subject = self._reply_subject(card)
         blockers = guardrails.auto_send_blockers(
             card, settings, now, self.store.agent_sends_since(card.thread_id, now - timedelta(days=1)), degraded)
-        reasons = review + blockers
+        gov = governor.assess(self.store, job.id, settings)
+        reasons = review + blockers + governor.governor_blockers(gov, effects)
         item = OutboxItem(self.store.new_id("out"), card.id, card.thread_id, candidate.email, subject, body, kind,
                           now, OutboxStatus.DRAFT, effects=effects, review_reasons=reasons,
                           latest_activity=result.latest_activity if result else "",

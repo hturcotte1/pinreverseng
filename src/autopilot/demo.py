@@ -157,6 +157,12 @@ def run(drafts: bool = False, use_claude: bool = False) -> Store:
     print(f"\n--- Conversion ledger ---\n  {summary_line(fn)}")
     for leak in fn.leaks:
         print(f"  leak: {leak.candidate} lost at {leak.stage_before} ({leak.reason})")
+    from autopilot.governor import assess
+    g = assess(store, "job_be", agent.settings_for(store.jobs["job_be"]))
+    print(f"\n--- Autonomy governor ---\n  tier: {g.tier.name} | review rate: {g.block_rate:.0%} | "
+          f"decisions: {g.decisions} | unsubscribes: {g.unsubscribes}")
+    for r in g.reasons:
+        print(f"  {r}")
     alice = store.card_for_thread(threads["alice"])
     print("\n--- Inbox timeline: Alice ---\n" + render_timeline(store, alice))
     print("\n--- Knowledge learned ---")

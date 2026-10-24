@@ -86,6 +86,15 @@ class AutomationSettings:
     max_agent_replies_per_day: int = 6
     human_takeover_hours: int = 48
     ai_disclosure_footer: str | None = None
+    # Autonomy governor: a per-job trust tier (0 draft-only, 1 assisted, 2 autonomous) with a sticky
+    # circuit breaker. Baseline is trusting; bad telemetry demotes. It never silences a message —
+    # worst case is a human-reviewed draft. Set max_autonomy_tier=0 for earn-up-from-zero behavior.
+    autonomy_governor: bool = True
+    max_autonomy_tier: int = 2
+    governor_min_decisions: int = 5
+    governor_block_rate_assist: float = 0.35
+    governor_block_rate_draft: float = 0.6
+    governor_unsub_trip: int = 2
 
 
 def resolve_settings(team: AutomationSettings, job_override: AutomationSettings | None) -> AutomationSettings:

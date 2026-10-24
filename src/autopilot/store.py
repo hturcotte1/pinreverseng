@@ -36,6 +36,8 @@ class Store:
         self.audit: list[AuditEntry] = []
         self.suppressed: set[str] = set()  # unsubscribed emails, honoured on every channel
         self.responded: set[str] = set()  # candidate ids whose sequences are halted team-wide
+        self.breaker_tripped: dict[str, str] = {}  # job_id -> reason; sticky until a recruiter re-arms
+        self.breaker_watermark: dict[str, int] = {}  # job_id -> unsubscribes forgiven at last re-arm
         self.learned = LearnedFacts()
         self._ids = itertools.count(1)
 
