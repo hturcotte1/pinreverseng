@@ -64,7 +64,7 @@ from autopilot.store import Store
 class Autopilot:
     def __init__(self, store: Store, brain: Brain, mail: MailProvider, calendar: Calendar, notifier: Notifier,
                  clock: Clock | None = None, team_settings: AutomationSettings | None = None,
-                 rng: random.Random | None = None):
+                 rng: random.Random | None = None, shadow: bool = False):
         self.store = store
         self.brain = brain
         self.mail = mail
@@ -73,6 +73,10 @@ class Autopilot:
         self.clock = clock or SystemClock()
         self.team_settings = team_settings or AutomationSettings()
         self.rng = rng or random.Random()
+        # Shadow mode: run the full pipeline on live inbound but deliver NOTHING (no mail, no draft,
+        # no scheduled send, no side effects). Use a throwaway store to measure the agent against the
+        # recruiter's real replies before trusting it. See autopilot.shadow.
+        self.shadow = shadow
 
     # ------------------------------------------------------------------ bookkeeping
     def settings_for(self, job: Job) -> AutomationSettings:
@@ -444,6 +448,13 @@ class Autopilot:
                           now, OutboxStatus.DRAFT, effects=effects, review_reasons=reasons,
                           latest_activity=result.latest_activity if result else "",
                           open_item=result.open_item if result else None)
+        if self.shadow:
+            # Record what we WOULD do, deliver nothing, apply no effects.
+            item.status = OutboxStatus.SHADOW
+            item.flight_plan = flightplan.build(card.id, kind, body, result, effects,
+                                                auto_send=not reasons, review_reasons=reasons)
+            self.store.outbox[item.id] = item
+            return item
         if not reasons:
             item.status = OutboxStatus.SCHEDULED
             item.send_at = send_at or now + self._reply_delay(settings.reply_speed)

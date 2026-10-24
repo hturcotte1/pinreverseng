@@ -194,6 +194,7 @@ class OutboxStatus(str, Enum):
     DRAFT = "draft"  # waiting in the recruiter's mailbox for review
     SENT = "sent"
     CANCELLED = "cancelled"
+    SHADOW = "shadow"  # would-have-sent in shadow mode; never delivered
 
 
 @dataclass
