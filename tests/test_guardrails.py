@@ -39,3 +39,26 @@ def test_unverified_answers():
     ])
     assert unverified_answers(result, KB, ["pay?", "visa?", "remote?", "team size?"], 0.7) == \
         {"visa?", "remote?", "team size?"}  # team size was silently skipped
+
+
+from autopilot.guardrails import candidate_experience_issues
+
+
+def test_experience_gate_flags_overpromise_pressure_and_commitment():
+    assert any("over-promise" in i for i in
+               candidate_experience_issues("You'll love it here, it's the best team!", [], []))
+    assert any("pressuring" in i for i in
+               candidate_experience_issues("Reply ASAP, limited spots!", [], []))
+    assert any("commitment" in i for i in
+               candidate_experience_issues("Great news — you'll hear back by Friday with an offer.", [], []))
+
+
+def test_experience_gate_passes_clean_grounded_message():
+    body = "Hi Ana,\n\nOn compensation: the range is $150k-$170k base. Happy to find a time to chat.\n\nBest, Sam"
+    assert candidate_experience_issues(body, [], []) == []
+
+
+def test_experience_gate_flags_dropped_question():
+    body = "Hi Ana,\n\nGreat to hear from you! Let's find a time.\n\nBest, Sam"  # no answer, no defer line
+    issues = candidate_experience_issues(body, ["What is the salary range?"], [])
+    assert any("unaddressed" in i for i in issues)

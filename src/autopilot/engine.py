@@ -395,6 +395,7 @@ class Autopilot:
                 review.append("answers could not be verified against the knowledge base")
         degraded = degraded or result.degraded
         issues = guardrails.check_text(result.body, ctx.kb, company, recruiter_answers)
+        issues += guardrails.candidate_experience_issues(result.body, plan.questions, result.answers)
         if issues:
             review.extend(issues)
             self._audit(card, "guardrail", "; ".join(issues), "message held for human review")
