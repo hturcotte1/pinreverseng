@@ -202,5 +202,9 @@ def parse_analysis(data: dict, n_slots: int) -> ReplyAnalysis:
         dealbreaker_conflicts=list(data["dealbreaker_conflicts"]),
         follow_up_on=follow_up,
         tone=data["tone"],
+        objections=list(data.get("objections", [])),
+        sentiment=data.get("sentiment", "steady"),
+        at_risk=bool(data.get("at_risk", False)),
+        at_risk_reason=data.get("at_risk_reason"),
         summary=data["summary"],
     )

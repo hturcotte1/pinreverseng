@@ -20,6 +20,7 @@ from datetime import date, datetime, time, timedelta
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from autopilot import guardrails
+from autopilot.insights import HARD_OBJECTIONS, OBJECTION_LABELS, SOFT_OBJECTIONS
 from autopilot.brain.base import (
     NOTE_SLOT_TAKEN,
     Brain,
@@ -205,6 +206,22 @@ class Autopilot:
         settings = self.settings_for(job)
         review: list[str] = []
 
+        # Candidate-experience signals: record on the card, escalate money/competing situations to a
+        # human, and raise a one-time at-risk heads-up before a good candidate slips away.
+        card.sentiment = a.sentiment
+        card.objections = sorted(set(card.objections) | set(a.objections))
+        card.at_risk, card.at_risk_reason = a.at_risk, a.at_risk_reason
+        hard = [o for o in a.objections if o in HARD_OBJECTIONS]
+        if hard and not a.needs_human:
+            a.needs_human = True
+            a.needs_human_reason = a.at_risk_reason or "raised a compensation or competing-offer concern"
+        # Proactive at-risk heads-up for the soft/cooling case; the needs_human path has its own alert.
+        if a.at_risk and not hard and not card.at_risk_alerted and a.interest is not Interest.NOT_INTERESTED:
+            card.at_risk_alerted = True
+            self.notifier.status_update(
+                recruiter, f":warning: {candidate.name} ({job.title}) may be at risk - {a.at_risk_reason}. "
+                           f"Sentiment is {a.sentiment}.")
+
         if a.unsubscribe:
             self.store.suppressed.add(candidate.email.lower())
             self._archive(card, ArchiveReason.UNSUBSCRIBED, "Unsubscribed", "candidate asked not to be contacted")
@@ -238,7 +255,11 @@ class Autopilot:
                 card.latest_activity, card.open_item = "Said not interested", "decide whether to archive"
             return
 
-        plan = ComposePlan(kind="reply", questions=list(a.questions), tone=a.tone)
+        plan = ComposePlan(kind="reply", questions=list(a.questions), tone=a.tone,
+                           objections=[o for o in a.objections if o in SOFT_OBJECTIONS])
+        plan.acknowledge = [OBJECTION_LABELS[o] for o in hard]
+        if a.needs_human and not plan.acknowledge and not plan.questions:
+            plan.acknowledge = ["your note"]  # a holding draft so the recruiter has something to send
         effects: list[Effect] = []
 
         if a.interest is Interest.NOT_NOW:
@@ -258,7 +279,7 @@ class Autopilot:
                                                    + "; ".join(a.dealbreaker_conflicts))
 
         if not (plan.questions or plan.slot_labels or plan.scheduling_link or plan.confirmed_meeting
-                or plan.meeting_cancelled or plan.follow_up_label):
+                or plan.meeting_cancelled or plan.follow_up_label or plan.objections or plan.acknowledge):
             card.latest_activity = card.latest_activity or "Candidate replied"
             self._audit(card, "no_reply", "nothing to say; waiting", a.summary)
             return

@@ -141,6 +141,11 @@ class Card:
     manually_moved_at: datetime | None = None
     paused: bool = False  # recruiter took the conversation over
     candidate_timezone: str | None = None
+    sentiment: str = "steady"  # warming | steady | cooling (latest read)
+    objections: list[str] = field(default_factory=list)  # distinct objection codes seen on this card
+    at_risk: bool = False
+    at_risk_reason: str | None = None
+    at_risk_alerted: bool = False  # dedup the proactive recruiter heads-up
 
 
 @dataclass

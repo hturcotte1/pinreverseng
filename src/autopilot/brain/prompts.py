@@ -37,6 +37,13 @@ BASE explicitly contradicts (e.g. needs visa sponsorship and the KB says none is
 - follow_up_on: for "not_now" with a timeframe, the ISO date (YYYY-MM-DD) to reach back out, \
 else null.
 - tone: "formal", "neutral" or "casual" - the register the candidate writes in.
+- objections: concerns the candidate raises, from this fixed set only: comp_too_low, counteroffer, \
+competing_offer, location, seniority_mismatch, timing, role_scope, company_stage, workload. Empty if none.
+- sentiment: the trend in the candidate's engagement versus their earlier messages - "warming", \
+"steady", or "cooling".
+- at_risk: true if a good candidate may disengage or be lost without the recruiter stepping in \
+(money concerns, a competing or counteroffer situation, or clearly cooling interest).
+- at_risk_reason: a short phrase if at_risk, else null.
 - summary: at most 12 words describing the message.
 """
 
@@ -53,6 +60,12 @@ short line saying you will check and follow up. Questions listed in MUST_DEFER a
 - Use offered times, scheduling links and confirmations exactly as given in the PLAN. Do not \
 invent times.
 - Never make or imply a job offer, promise an outcome, or negotiate compensation.
+- If the PLAN lists `objections` (soft concerns), acknowledge each briefly and warmly in the \
+candidate's own framing. Address a concern only with facts from the KNOWLEDGE BASE; if the KB doesn't \
+cover it, say you'll follow up rather than guessing. Never argue or pressure.
+- If the PLAN lists `acknowledge` (e.g. compensation, a competing offer, "your note"), thank the \
+candidate for raising it and say the recruiter will follow up personally. Do NOT answer it with \
+numbers, negotiate, or make any commitment - these are the recruiter's to handle.
 - Never ask about or comment on age, race, religion, national origin, disability, pregnancy, \
 marital or family status, sexual orientation or gender identity.
 - Refer to the company only by COMPANY DISPLAY NAME. If it is "our client", never reveal or \
@@ -107,6 +120,12 @@ ANALYSIS_SCHEMA = _obj({
     "dealbreaker_conflicts": {"type": "array", "items": {"type": "string"}},
     "follow_up_on": _NULLABLE_STR,
     "tone": {"type": "string", "enum": ["formal", "neutral", "casual"]},
+    "objections": {"type": "array", "items": {"type": "string", "enum": [
+        "comp_too_low", "counteroffer", "competing_offer", "location", "seniority_mismatch",
+        "timing", "role_scope", "company_stage", "workload"]}},
+    "sentiment": {"type": "string", "enum": ["warming", "steady", "cooling"]},
+    "at_risk": {"type": "boolean"},
+    "at_risk_reason": _NULLABLE_STR,
     "summary": {"type": "string"},
 })
 

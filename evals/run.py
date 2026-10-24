@@ -64,7 +64,7 @@ def classification_report(brain: Brain, include_multilingual: bool = True) -> di
     kb = KnowledgeBase(Company("c", "Acme"), Job("j", "Platform Engineer", "c", "r"))
     scores: dict[str, FieldScore] = {k: FieldScore() for k in
                                      ("interest", "has_questions", "scheduling", "needs_human", "unsubscribe",
-                                      "auto_reply")}
+                                      "auto_reply", "objections")}
     for case in CASES:
         tags = case.get("tags", set())
         if not include_multilingual and "multilingual" in tags:
@@ -99,6 +99,10 @@ def classification_report(brain: Brain, include_multilingual: bool = True) -> di
         if "unsubscribe" in expect:
             scores["unsubscribe"].record(a.unsubscribe == expect["unsubscribe"],
                                          f"{case['id']}: unsubscribe={a.unsubscribe}")
+        if "objections" in expect:
+            want, got = set(expect["objections"]), set(a.objections)
+            ok = want <= got if want else not got  # expected codes present; none expected -> none found
+            scores["objections"].record(ok, f"{case['id']}: got {sorted(got)}, want ⊇ {sorted(want)}")
     return scores
 
 

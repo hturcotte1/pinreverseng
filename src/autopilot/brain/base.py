@@ -72,6 +72,11 @@ class ReplyAnalysis:
     tone: str = "neutral"  # formal | neutral | casual
     summary: str = ""
     degraded: bool = False  # produced by a fallback path; engine will only draft
+    # Candidate-experience signals (see autopilot.insights).
+    objections: list[str] = field(default_factory=list)  # Objection codes raised in this message
+    sentiment: str = "steady"  # warming | steady | cooling
+    at_risk: bool = False  # likely to disengage or be lost without recruiter attention
+    at_risk_reason: str | None = None
 
 
 @dataclass
@@ -87,6 +92,8 @@ class ComposePlan:
     follow_up_label: str | None = None
     notes: list[str] = field(default_factory=list)
     tone: str = "neutral"
+    objections: list[str] = field(default_factory=list)  # soft concerns to acknowledge + answer from KB
+    acknowledge: list[str] = field(default_factory=list)  # hard concerns: acknowledge, never answer/negotiate
 
 
 @dataclass

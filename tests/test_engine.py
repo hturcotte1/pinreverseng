@@ -318,3 +318,37 @@ def test_not_now_schedules_reviewed_reengagement(world):
     reengage = [o for o in world.outbox("cy") if o.kind == "reengage"]
     assert reengage and reengage[0].status is OutboxStatus.DRAFT
     assert card.stage is not Stage.ARCHIVED  # not auto-archived while parked
+
+
+def test_hard_objection_drafts_and_alerts(world):
+    # A compensation objection is a human decision: draft the reply and ping the recruiter.
+    world.reply("ana", "Interested, but honestly the comp is a bit low for me.")
+    card = world.card("ana")
+    assert "comp_too_low" in card.objections
+    assert card.at_risk
+    latest = world.outbox("ana")[-1]
+    assert latest.status is OutboxStatus.DRAFT
+    assert any("needs your attention" in text.lower() for _, text in world.notifier.updates)
+    assert "comp" in latest.body.lower() and "150k" not in latest.body  # acknowledges, never quotes a number
+
+
+def test_cooling_sentiment_raises_one_proactive_alert(world):
+    world.reply("ana", "This sounds great, I'd really love to learn more!")
+    world.run_minutes(10)
+    world.reply("ana", "ok")                       # terse, cooling
+    card = world.card("ana")
+    assert card.sentiment == "cooling"
+    warnings = [t for _, t in world.notifier.updates if "at risk" in t.lower()]
+    assert len(warnings) == 1
+    world.reply("ana", "sure")                      # still cool — must not re-alert
+    assert len([t for _, t in world.notifier.updates if "at risk" in t.lower()]) == 1
+
+
+def test_soft_objection_is_acknowledged_in_an_auto_reply(world):
+    world.store.jobs["j1"].knowledge += "Work setup: hybrid, 2 days a week in Austin, flexible.\n"
+    world.reply("ana", "Keen! Only thing is the commute — I'd really prefer mostly remote.")
+    world.run_minutes(10)
+    card = world.card("ana")
+    assert "location" in card.objections
+    body = world.outbox("ana", OutboxStatus.SENT)[-1].body.lower()
+    assert "hear you" in body            # acknowledged warmly

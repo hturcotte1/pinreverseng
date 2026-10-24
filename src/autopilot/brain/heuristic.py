@@ -22,6 +22,7 @@ from autopilot.brain.base import (
     SchedulingIntent,
 )
 from autopilot.brain.text import detect_timezone, strip_quoted
+from autopilot.insights import OBJECTION_LABELS, assess_at_risk, detect_objections, sentiment_trend
 from autopilot.knowledge import topics_of
 from autopilot.models import Interest
 
@@ -124,6 +125,9 @@ class HeuristicBrain:
                 a.interest is Interest.UNCLEAR:
             a.interest = Interest.INTERESTED
         a.dealbreaker_conflicts = self._dealbreakers(ctx, text)
+        a.objections = detect_objections(text)
+        a.sentiment = sentiment_trend(ctx.thread, ctx.latest)
+        a.at_risk, a.at_risk_reason = assess_at_risk(a.objections, a.sentiment, a.interest.value)
         a.summary = self._summary(a)
         return a
 
@@ -291,6 +295,10 @@ class HeuristicBrain:
             parts.append(f"{len(a.questions)} question(s)")
         if a.scheduling is not SchedulingIntent.NONE:
             parts.append(a.scheduling.value.replace("_", " "))
+        if a.objections:
+            parts.append("objection: " + ", ".join(a.objections))
+        if a.at_risk:
+            parts.append(f"at risk ({a.at_risk_reason})")
         return "; ".join(parts)
 
     # -- composition --------------------------------------------------------------------
@@ -331,6 +339,26 @@ class HeuristicBrain:
         else:
             lines.append("Thanks so much for getting back to me!" if plan.tone == "casual"
                          else "Thanks for getting back to me.")
+
+        for label in plan.acknowledge:  # hard concerns: acknowledge, hand to the recruiter, never negotiate
+            if label == "your note":
+                lines.append(f"Thanks for your note - let me loop in {ctx.recruiter.first_name} directly "
+                             "so you get the right answer on this.")
+            else:
+                lines.append(f"Thanks for being upfront about {label} - that's an important one, so let me "
+                             f"bring in {ctx.recruiter.first_name} to go through it with you properly.")
+
+        for code in plan.objections:  # acknowledge soft concerns warmly; facts only from the KB
+            label = OBJECTION_LABELS.get(code, code)
+            hits = ctx.kb.search(label, k=1)
+            fact, score = hits[0] if hits else (None, 0.0)
+            if fact is not None and score >= 0.5:
+                text = re.sub(r"^[A-Z][\w &/-]{1,28}:\s+", "", ctx.kb.redact(fact.text))
+                lines.append(f"I hear you on {label} - for what it's worth, {text.rstrip('.')}.")
+                claims.append(AnswerClaim(f"objection:{code}", True, [fact.id], min(1.0, score + 0.2)))
+            else:
+                lines.append(f"I hear you on {label} - happy to talk it through and get you the details "
+                             "that matter most to you.")
 
         for question in plan.questions:
             label = question_label(question)

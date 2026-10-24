@@ -109,6 +109,19 @@ CASES: list[dict] = [
     {"id": "ml-fr-decline", "body": "Merci, mais je ne suis pas intéressé pour le moment.",
      "tags": {"multilingual"},
      "expect": {"interest": "not_interested"}},
+    # ---- objections (candidate-experience layer) ------------------------------------
+    # comp_too_low is detected here; the engine (not the brain) promotes it to needs_human — see
+    # tests/test_engine.py::test_hard_objection_drafts_and_alerts.
+    {"id": "obj-comp", "body": "Interested, but honestly the base is a bit low compared to what I'm seeing.",
+     "expect": {"objections": ["comp_too_low"]}},
+    {"id": "obj-competing", "body": "Keen, though I'm in the final rounds with another offer already.",
+     "expect": {"objections": ["competing_offer"], "needs_human": True}},
+    {"id": "obj-location", "body": "Sounds good! Only concern is the commute — I'd prefer mostly remote.",
+     "expect": {"objections": ["location"]}},
+    {"id": "obj-stage", "body": "Looks interesting but it seems quite early — how much runway is there?",
+     "expect": {"objections": ["company_stage"], "has_questions": True}},
+    {"id": "obj-none", "body": "Great, what's the start date?",
+     "expect": {"objections": []}},
     # ---- offer outcomes -------------------------------------------------------------
     {"id": "offer-accept", "body": "I'm thrilled to accept the offer! Where do I sign?",
      "expect": {"interest": "interested"}},
