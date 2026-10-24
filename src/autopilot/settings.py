@@ -58,15 +58,19 @@ class SchedulingSettings:
 
 @dataclass
 class AutomationSettings:
+    # Cadence defaults are grounded in Pin's published 2026 Recruiting Outreach Benchmark
+    # (4M+ messages); see docs/RESEARCH_FINDINGS.md §4. Key figures: ~2 business days between
+    # touches (48h silence -> next touch); 3 touches capture ~93% of replies; 93.9% of replies
+    # land within 7 days. So: nudge once after ~2 business days, archive after ~10 days.
     answer_mode: AnswerMode = AnswerMode.DRAFT
     escalation: EscalationChannel = EscalationChannel.SLACK
     allow_learning: bool = True
     scheduling: SchedulingSettings = field(default_factory=SchedulingSettings)
     archive_not_interested: bool = True
     close_politely: bool = True  # short thank-you when archiving a "not interested"
-    nudge_after_days: int | None = 3
-    max_nudges: int = 1
-    archive_unresponsive_after_days: int | None = 10
+    nudge_after_days: int | None = 3  # ~2 business days of silence (benchmark: 48h -> next touch)
+    max_nudges: int = 1  # 3 touches already capture ~93% of replies; one reminder is enough
+    archive_unresponsive_after_days: int | None = 10  # past the 7-day / 93.9% reply mass
     reply_speed: ReplySpeed = ReplySpeed.NATURAL
     # Guardrail knobs (our additions; not part of the documented surface).
     min_answer_confidence: float = 0.7

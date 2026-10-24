@@ -6,6 +6,9 @@ A public-source teardown of **Pin's Autopilot** (an AI recruiting reply agent la
 * [`docs/TEARDOWN.md`](docs/TEARDOWN.md): what Autopilot is, its complete documented feature
   surface, how it grew out of earlier Pin releases, the vendor stack, and an inferred
   architecture with confidence levels. Every claim is sourced.
+* [`docs/RESEARCH_FINDINGS.md`](docs/RESEARCH_FINDINGS.md): extended public-source research —
+  founder lineage (Interseller), tech stack, the MCP object model, published outreach-cadence data,
+  and the contradictions between sources, each with a source and confidence level.
 * [`docs/BLACKBOX_TEST_PLAN.md`](docs/BLACKBOX_TEST_PLAN.md): 24 experiments to settle the open
   questions by using the product normally on your own account.
 * [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md): how this implementation works.
