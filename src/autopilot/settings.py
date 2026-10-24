@@ -68,6 +68,11 @@ class AutomationSettings:
     scheduling: SchedulingSettings = field(default_factory=SchedulingSettings)
     archive_not_interested: bool = True
     close_politely: bool = True  # short thank-you when archiving a "not interested"
+    attempt_recovery: bool = True  # one KB-grounded attempt to turn a recoverable soft "no" around
+    # Shared budget across ALL agent-initiated sends (nudge, re-engage, lifecycle). Hard exemptions
+    # (unsubscribe / not-interested / needs-human) are enforced by card state, not this budget.
+    max_proactive_touches: int = 4
+    proactive_cooldown_hours: int = 20
     nudge_after_days: int | None = 3  # ~2 business days of silence (benchmark: 48h -> next touch)
     max_nudges: int = 1  # 3 touches already capture ~93% of replies; one reminder is enough
     archive_unresponsive_after_days: int | None = 10  # past the 7-day / 93.9% reply mass

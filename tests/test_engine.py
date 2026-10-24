@@ -352,3 +352,39 @@ def test_soft_objection_is_acknowledged_in_an_auto_reply(world):
     assert "location" in card.objections
     body = world.outbox("ana", OutboxStatus.SENT)[-1].body.lower()
     assert "hear you" in body            # acknowledged warmly
+
+
+def test_soft_no_gets_one_grounded_recovery_then_archives(world):
+    world.store.jobs["j1"].knowledge += "Role: this is a senior IC role with real scope and staff-track growth.\n"
+    world.reply("ana", "Not interested honestly — the role seems too junior for me.")
+    card = world.card("ana")
+    assert card.recovery_attempted and card.stage is Stage.REPLIED  # recovered, NOT archived
+    assert "seniority_mismatch" in card.objections
+    world.run_minutes(10)
+    body = world.outbox("ana", OutboxStatus.SENT)[-1].body.lower()
+    assert "fair" in body and "no pressure" in body
+    # a second "no" is honored — no second attempt
+    world.reply("ana", "Appreciate it, but still not interested.")
+    assert world.card("ana").stage is Stage.ARCHIVED
+
+
+def test_hard_dealbreaker_no_is_not_argued_with():
+    world = make_world()
+    world.store.companies["co"].knowledge += "We do not offer visa sponsorship.\n"
+    world.reply("ana", "Not interested — I'd need visa sponsorship and it sounds like that's a no.")
+    # visa need vs KB = dealbreaker; a 'not interested' here must archive, never attempt recovery
+    assert world.card("ana").stage is Stage.ARCHIVED
+    assert world.card("ana").recovery_attempted is False
+
+
+def test_proactive_touch_budget_caps_nudges():
+    world = make_world(nudge_after_days=2, max_nudges=5, max_proactive_touches=2,
+                       archive_unresponsive_after_days=None)
+    world.reply("ana", "Interested, happy to chat!")
+    world.run_minutes(10)
+    for _ in range(20):
+        world.clock.advance(days=1)
+        world.agent.tick()
+    assert world.card("ana").proactive_touches <= 2
+    nudges = [o for o in world.outbox("ana") if o.kind == "nudge"]
+    assert len(nudges) <= 2

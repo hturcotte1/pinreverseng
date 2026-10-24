@@ -244,6 +244,19 @@ class Autopilot:
 
         if a.interest is Interest.NOT_INTERESTED:
             card.interest = Interest.NOT_INTERESTED
+            recoverable = [o for o in a.objections if o in SOFT_OBJECTIONS]
+            # One capped, KB-grounded attempt to turn a recoverable soft "no" around. Never argue with a
+            # hard dealbreaker, an unsubscribe, or a human-escalation; never a second time.
+            if (recoverable and settings.attempt_recovery and not card.recovery_attempted
+                    and not a.unsubscribe and not a.needs_human and not a.dealbreaker_conflicts):
+                card.recovery_attempted = True
+                rescue = ComposePlan(kind="rescue", tone=a.tone, objections=recoverable)
+                self._audit(card, "recovery", f"soft-no recovery attempt ({', '.join(recoverable)})",
+                            "recoverable objection, one attempt only")
+                self._compose_and_deliver(card, ctx, rescue, settings, review, [], a.degraded,
+                                          keep_card_summary=True)
+                card.latest_activity = "Attempted to recover a soft no"
+                return
             if settings.archive_not_interested:
                 reason = a.not_interested_reason or "not interested"
                 self._archive(card, ArchiveReason.NOT_INTERESTED, f"Declined - {reason}",
@@ -634,12 +647,14 @@ class Autopilot:
         if any(o.status is OutboxStatus.SCHEDULED for o in pending):
             return
 
-        if card.follow_up_on and now >= card.follow_up_on and not pending:
+        if card.follow_up_on and now >= card.follow_up_on and not pending \
+                and self._proactive_ok(card, settings, now):
             card.follow_up_on = None
             card.interest = Interest.UNCLEAR
             ctx = self._context(card, None)
             self._compose_and_deliver(card, ctx, ComposePlan(kind="reengage"), settings,
                                       ["re-engagement after 'not now' is always reviewed"], [], False)
+            self._record_proactive(card, now)
             return
         if card.interest is Interest.NOT_NOW:
             return
@@ -649,7 +664,8 @@ class Autopilot:
             return
         idle = now - card.last_outbound_at
         if (not pending and card.interest is Interest.INTERESTED and settings.nudge_after_days is not None
-                and card.nudges_sent < settings.max_nudges and idle >= timedelta(days=settings.nudge_after_days)):
+                and card.nudges_sent < settings.max_nudges and idle >= timedelta(days=settings.nudge_after_days)
+                and self._proactive_ok(card, settings, now)):
             ctx = self._context(card, None)
             send_at = self._local_morning(now, ctx.candidate_tz)
             plan = ComposePlan(kind="nudge", scheduling_link=settings.scheduling.scheduling_link
@@ -662,11 +678,29 @@ class Autopilot:
                 self._offer(card, ctx, settings, plan, effects, None)  # earlier times expired: offer new ones
             card.nudges_sent += 1
             self._compose_and_deliver(card, ctx, plan, settings, [], effects, False, send_at=send_at)
+            self._record_proactive(card, now)
             return
         if settings.archive_unresponsive_after_days is not None and \
                 idle >= timedelta(days=settings.archive_unresponsive_after_days):
             self._archive(card, ArchiveReason.UNRESPONSIVE, "Archived - no reply",
                           f"no reply for {idle.days} days")
+
+    def _proactive_ok(self, card: Card, settings: AutomationSettings, now: datetime) -> bool:
+        """Shared gate for every agent-initiated send: cap total touches and enforce a cooldown.
+
+        Hard exemptions (unsubscribe / not-interested / needs-human) are already enforced by card
+        state before a card ever reaches a proactive timer, so they are not re-checked here.
+        """
+        if card.proactive_touches >= settings.max_proactive_touches:
+            return False
+        if card.last_proactive_at is not None and \
+                now - card.last_proactive_at < timedelta(hours=settings.proactive_cooldown_hours):
+            return False
+        return True
+
+    def _record_proactive(self, card: Card, now: datetime) -> None:
+        card.proactive_touches += 1
+        card.last_proactive_at = now
 
     def _local_morning(self, now: datetime, tz: str) -> datetime:
         """Next weekday 9-11am in the candidate's timezone (or now if we're already in it)."""

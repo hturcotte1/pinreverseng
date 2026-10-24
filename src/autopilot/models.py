@@ -147,6 +147,9 @@ class Card:
     at_risk: bool = False
     at_risk_reason: str | None = None
     at_risk_alerted: bool = False  # dedup the proactive recruiter heads-up
+    recovery_attempted: bool = False  # at most one soft-no recovery attempt per card
+    proactive_touches: int = 0  # agent-initiated sends (nudge/re-engage/lifecycle), budget-capped
+    last_proactive_at: datetime | None = None
 
 
 @dataclass

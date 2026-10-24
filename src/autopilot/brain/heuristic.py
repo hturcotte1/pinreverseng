@@ -331,6 +331,25 @@ class HeuristicBrain:
             lines.append(f"You'd mentioned reaching back out around now, so I wanted to check in - is the "
                          f"{ctx.job_title} role something you'd be open to exploring?")
             return ComposeResult(self._wrap(ctx, lines), latest_activity="Re-engaged after 'not now'")
+        if plan.kind == "rescue":
+            # One low-pressure attempt to address a recoverable concern. Facts only from the KB; if the
+            # KB can't support it, offer to share more or close out - never argue, never over-promise.
+            lines.append("Totally fair, and I appreciate you being upfront!" if plan.tone == "casual"
+                         else "That's completely fair, and I appreciate you being upfront.")
+            for code in plan.objections:
+                label = OBJECTION_LABELS.get(code, code)
+                hits = ctx.kb.search(label, k=1)
+                fact, score = hits[0] if hits else (None, 0.0)
+                if fact is not None and score >= 0.5:
+                    text = re.sub(r"^[A-Z][\w &/-]{1,28}:\s+", "", ctx.kb.redact(fact.text))
+                    lines.append(f"If {label} was the sticking point, one thing worth knowing: {text.rstrip('.')}.")
+                    claims.append(AnswerClaim(f"objection:{code}", True, [fact.id], min(1.0, score + 0.2)))
+                else:
+                    lines.append(f"If {label} was the main thing, I'd be glad to share how the team thinks "
+                                 "about it - or I can close this out, whichever you prefer.")
+            lines.append("No pressure either way - just let me know what makes sense for you.")
+            return ComposeResult(self._wrap(ctx, lines), claims,
+                                 latest_activity="Attempted to recover a soft no", open_item="awaiting candidate")
 
         if plan.kind == "follow_up_answer":
             for question, answer in plan.recruiter_answers:
