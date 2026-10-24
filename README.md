@@ -13,6 +13,10 @@ A public-source teardown of **Pin's Autopilot** (an AI recruiting reply agent la
   questions by using the product normally on your own account.
 * [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md): how this implementation works.
 * [`docs/METHOD_AND_BOUNDARIES.md`](docs/METHOD_AND_BOUNDARIES.md): what was and was not done, and why.
+* [`docs/BEYOND_PIN.md`](docs/BEYOND_PIN.md): the capabilities that take this past Pin's reactive
+  Autopilot — candidate-experience intelligence, a groundedness/experience gate, a self-maintaining
+  knowledge base, voice calibration, an interview concierge, a conversion ledger, flight plans,
+  shadow mode, and an autonomy governor — each with its safety rule.
 
 **Method.** Only publicly available material was used. No login, decompilation, API probing or
 scraping. The repository contains no Pin code or content and is not affiliated with Pin.
@@ -75,14 +79,20 @@ credentials and are marked reference-only.
 src/autopilot/
   engine.py         orchestration: inbound -> analyze -> policy -> compose -> verify -> deliver; timers
   brain/            analyze / compose / distil_fact interface; heuristic + Claude implementations; prompts
-  knowledge.py      company/job/learned facts with ids
+  knowledge.py      company/job/learned facts with ids; can_answer
+  insights.py       objection / sentiment / at-risk signals (candidate-experience layer)
+  coverage.py       pre-outreach KB coverage, conflict + staleness detection
+  voice.py          per-recruiter voice calibration (StyleProfile)
   scheduling.py     slot finding, labels, US holidays
-  guardrails.py     citation verification, text checks, auto-send eligibility
+  guardrails.py     citation verification, text checks, candidate-experience gate, auto-send eligibility
   pipeline.py       stage transition rules
+  ledger.py         conversion funnel + per-card leak attribution
+  flightplan.py     inspectable record of every outbound decision
+  shadow.py         shadow-mode agreement scoring
+  governor.py       per-job autonomy tier + sticky circuit breaker
   settings.py       Outreach-Automations-style settings (team defaults, per-job override)
-  integrations/     mail, calendar, Slack boundaries (+ in-memory versions)
+  integrations/     mail, calendar, Slack boundaries (+ gmail.py, graph.py, google_calendar.py adapters)
   board.py, demo.py text board / timeline rendering, end-to-end simulation
-  integrations/     + gmail.py, graph.py, google_calendar.py reference adapters
 evals/
   dataset.py        labelled candidate replies + knowledge-base grounding cases
   run.py            scored evaluation runner (python -m evals.run)
