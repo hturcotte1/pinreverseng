@@ -222,3 +222,4 @@ class OutboxItem:
     review_reasons: list[str] = field(default_factory=list)
     latest_activity: str = ""
     open_item: str | None = None
+    flight_plan: object | None = None  # autopilot.flightplan.FlightPlan

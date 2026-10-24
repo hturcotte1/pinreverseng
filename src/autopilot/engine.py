@@ -19,7 +19,7 @@ import random
 from datetime import date, datetime, time, timedelta
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from autopilot import guardrails
+from autopilot import flightplan, guardrails
 from autopilot.insights import HARD_OBJECTIONS, OBJECTION_LABELS, SOFT_OBJECTIONS
 from autopilot.brain.base import (
     NOTE_SLOT_TAKEN,
@@ -290,6 +290,8 @@ class Autopilot:
             review.extend(a.dealbreaker_conflicts)
             self.notifier.status_update(recruiter, f"Possible deal-breaker for {candidate.name} ({job.title}): "
                                                    + "; ".join(a.dealbreaker_conflicts))
+            if not plan.acknowledge and not plan.questions:
+                plan.acknowledge = ["your note"]  # leave the recruiter a holding draft to review
 
         if not (plan.questions or plan.slot_labels or plan.scheduling_link or plan.confirmed_meeting
                 or plan.meeting_cancelled or plan.follow_up_label or plan.objections or plan.acknowledge):
@@ -449,8 +451,15 @@ class Autopilot:
         else:
             item.draft_ref = self.mail.create_draft(card.thread_id, candidate.email, subject, body)
             self._audit(card, "draft", f"{kind} drafted for review", "; ".join(reasons))
+        item.flight_plan = flightplan.build(card.id, kind, body, result, effects,
+                                            auto_send=not reasons, review_reasons=reasons)
         self.store.outbox[item.id] = item
         return item
+
+    def flight_plans(self, card_id: str) -> list:
+        """The inspectable record of every outbound decision on a card, in order."""
+        return [o.flight_plan for o in self.store.outbox.values()
+                if o.card_id == card_id and o.flight_plan is not None]
 
     def _reply_subject(self, card: Card) -> str:
         first = next((m.subject for m in self.store.threads.get(card.thread_id, []) if m.subject), "")
