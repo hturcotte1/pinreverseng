@@ -150,6 +150,8 @@ class Card:
     recovery_attempted: bool = False  # at most one soft-no recovery attempt per card
     proactive_touches: int = 0  # agent-initiated sends (nudge/re-engage/lifecycle), budget-capped
     last_proactive_at: datetime | None = None
+    prep_sent: bool = False  # interview prep note sent (reset if the meeting is cancelled/rescheduled)
+    confirm_sent: bool = False  # day-of confirmation sent
 
 
 @dataclass

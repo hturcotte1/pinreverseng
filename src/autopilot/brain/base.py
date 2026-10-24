@@ -94,6 +94,7 @@ class ComposePlan:
     tone: str = "neutral"
     objections: list[str] = field(default_factory=list)  # soft concerns to acknowledge + answer from KB
     acknowledge: list[str] = field(default_factory=list)  # hard concerns: acknowledge, never answer/negotiate
+    meeting_label: str | None = None  # for prep/confirm lifecycle messages
 
 
 @dataclass

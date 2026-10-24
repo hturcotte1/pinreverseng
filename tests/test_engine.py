@@ -388,3 +388,53 @@ def test_proactive_touch_budget_caps_nudges():
     assert world.card("ana").proactive_touches <= 2
     nudges = [o for o in world.outbox("ana") if o.kind == "nudge"]
     assert len(nudges) <= 2
+
+
+def _book(world, who="ana"):
+    world.reply(who, "Interested, happy to chat!")
+    world.run_minutes(10)
+    world.reply(who, "The first one works.")
+    world.run_minutes(10)
+    return world.card(who)
+
+
+def test_interview_prep_and_confirmation_fire_once(world):
+    world.store.jobs["j1"].knowledge += "Interview process: a 45-min screen, then a technical round, then onsite.\n"
+    card = _book(world)
+    start = card.meeting.start
+    world.clock.set(start - timedelta(hours=20))   # inside prep window (24h), outside confirm (3h)
+    world.agent.tick()
+    world.run_minutes(11)
+    prep = [o for o in world.outbox("ana", OutboxStatus.SENT) if o.kind == "prep"]
+    assert len(prep) == 1 and "what to expect" in prep[0].body.lower()
+    assert card.prep_sent and not card.confirm_sent
+
+    world.clock.set(start - timedelta(hours=2))    # inside confirm window
+    world.agent.tick()
+    world.run_minutes(11)
+    confirm = [o for o in world.outbox("ana", OutboxStatus.SENT) if o.kind == "confirm"]
+    assert len(confirm) == 1 and "looking forward" in confirm[0].body.lower()
+
+    world.clock.set(start - timedelta(minutes=30))  # still before start — must not re-send
+    world.agent.tick()
+    assert len([o for o in world.outbox("ana", OutboxStatus.SENT) if o.kind == "confirm"]) == 1
+
+
+def test_confirmation_is_budget_exempt():
+    # Budget of 0 proactive touches: prep is suppressed, but the time-critical confirmation still sends.
+    world = make_world(max_proactive_touches=0, send_interview_prep=True)
+    card = _book(world)
+    world.clock.set(card.meeting.start - timedelta(hours=2))
+    world.agent.tick(); world.run_minutes(11)
+    assert [o for o in world.outbox("ana", OutboxStatus.SENT) if o.kind == "confirm"]
+    assert not [o for o in world.outbox("ana") if o.kind == "prep"]
+
+
+def test_cancelled_meeting_resets_reminders(world):
+    card = _book(world)
+    world.clock.set(card.meeting.start - timedelta(hours=20))
+    world.agent.tick(); world.run_minutes(11)
+    assert card.prep_sent
+    world.reply("ana", "Sorry, something came up — can we reschedule?")
+    world.run_minutes(10)
+    assert card.prep_sent is False and card.confirm_sent is False  # fresh reminders for the new meeting

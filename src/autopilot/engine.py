@@ -507,6 +507,7 @@ class Autopilot:
             self.calendar.cancel_event(card.meeting.event_id)
             card.meeting = None
             card.interview_status = InterviewStatus.NOT_SCHEDULED
+            card.prep_sent = card.confirm_sent = False  # a rescheduled meeting gets fresh reminders
             self.notifier.status_update(recruiter, f"Cancelled the interview with {candidate.name} ({job.title}).")
         elif effect.kind == "book_meeting" and effect.slot:
             slot = effect.slot
@@ -642,6 +643,8 @@ class Autopilot:
             self.notifier.status_update(recruiter, f"Interview with {candidate.name} ({job.title}) is done.")
             return
         if card.meeting:
+            if card.meeting.start > now and not self.store.pending_outbox(card.id):
+                self._interview_reminders(card, settings, now)
             return
         pending = self.store.pending_outbox(card.id)
         if any(o.status is OutboxStatus.SCHEDULED for o in pending):
@@ -684,6 +687,30 @@ class Autopilot:
                 idle >= timedelta(days=settings.archive_unresponsive_after_days):
             self._archive(card, ArchiveReason.UNRESPONSIVE, "Archived - no reply",
                           f"no reply for {idle.days} days")
+
+    def _interview_reminders(self, card: Card, settings: AutomationSettings, now: datetime) -> None:
+        """Prep note (day-before) and day-of confirmation for an upcoming interview.
+
+        Each re-checks the live meeting at fire time (the caller only enters here when a meeting
+        exists and starts in the future). The confirmation is time-critical, so it bypasses the
+        proactive touch budget; the prep note counts against it.
+        """
+        _, job = self._parts(card)
+        recruiter = self.store.recruiters[job.owner_id]
+        until = card.meeting.start - now
+        ctx = self._context(card, None)
+        label = format_slot_dual(card.meeting.start, ctx.candidate_tz, recruiter.timezone)
+        link = settings.scheduling.scheduling_link if card.scheduling_link_sent else None
+        if settings.send_interview_confirm and not card.confirm_sent \
+                and until <= timedelta(hours=settings.interview_confirm_hours):
+            card.confirm_sent = True
+            self._compose_and_deliver(card, ctx, ComposePlan(kind="confirm", meeting_label=label,
+                                                             scheduling_link=link), settings, [], [], False)
+        elif settings.send_interview_prep and not card.prep_sent \
+                and until <= timedelta(hours=settings.interview_prep_hours) and self._proactive_ok(card, settings, now):
+            card.prep_sent = True
+            self._compose_and_deliver(card, ctx, ComposePlan(kind="prep", meeting_label=label), settings, [], [], False)
+            self._record_proactive(card, now)
 
     def _proactive_ok(self, card: Card, settings: AutomationSettings, now: datetime) -> bool:
         """Shared gate for every agent-initiated send: cap total touches and enforce a cooldown.

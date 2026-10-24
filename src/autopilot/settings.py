@@ -73,6 +73,10 @@ class AutomationSettings:
     # (unsubscribe / not-interested / needs-human) are enforced by card state, not this budget.
     max_proactive_touches: int = 4
     proactive_cooldown_hours: int = 20
+    send_interview_prep: bool = True  # a heads-up note the day before the interview
+    send_interview_confirm: bool = True  # a day-of confirmation (time-critical, budget-exempt)
+    interview_prep_hours: int = 24
+    interview_confirm_hours: int = 3
     nudge_after_days: int | None = 3  # ~2 business days of silence (benchmark: 48h -> next touch)
     max_nudges: int = 1  # 3 touches already capture ~93% of replies; one reminder is enough
     archive_unresponsive_after_days: int | None = 10  # past the 7-day / 93.9% reply mass

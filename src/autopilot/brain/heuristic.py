@@ -331,6 +331,22 @@ class HeuristicBrain:
             lines.append(f"You'd mentioned reaching back out around now, so I wanted to check in - is the "
                          f"{ctx.job_title} role something you'd be open to exploring?")
             return ComposeResult(self._wrap(ctx, lines), latest_activity="Re-engaged after 'not now'")
+        if plan.kind == "prep":
+            lines.append(f"Ahead of our conversation on {plan.meeting_label}, a quick heads-up on what to expect.")
+            hits = ctx.kb.search("interview process steps rounds", k=1)
+            fact, score = hits[0] if hits else (None, 0.0)
+            if fact is not None and score >= 0.5:
+                text = re.sub(r"^[A-Z][\w &/-]{1,28}:\s+", "", ctx.kb.redact(fact.text))
+                lines.append(f"How the process runs: {text.rstrip('.')}.")
+                claims.append(AnswerClaim("prep:process", True, [fact.id], min(1.0, score + 0.2)))
+            lines.append("Anything you'd like to make sure we cover? Just let me know.")
+            return ComposeResult(self._wrap(ctx, lines), claims, latest_activity="Sent interview prep")
+        if plan.kind == "confirm":
+            lines.append(f"Looking forward to our conversation on {plan.meeting_label}.")
+            if plan.scheduling_link:
+                lines.append(f"Here are the details: {plan.scheduling_link}")
+            lines.append("If anything's changed on your end, just let me know and we'll sort it out.")
+            return ComposeResult(self._wrap(ctx, lines), latest_activity="Sent day-of confirmation")
         if plan.kind == "rescue":
             # One low-pressure attempt to address a recoverable concern. Facts only from the KB; if the
             # KB can't support it, offer to share more or close out - never argue, never over-promise.
