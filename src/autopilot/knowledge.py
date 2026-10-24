@@ -16,7 +16,7 @@ from autopilot.models import Company, Job
 
 TOPIC_TERMS: dict[str, set[str]] = {
     "compensation": {"salary", "pay", "comp", "compensation", "range", "base", "bonus", "equity",
-                     "stock", "options", "rsu", "rsus", "ote", "commission", "money", "paying", "$"},
+                     "stock", "options", "rsu", "rsus", "ote", "commission", "money", "paying"},
     "benefits": {"benefits", "perks", "perk", "package"},
     "health": {"health", "insurance", "dental", "medical", "vision", "healthcare"},
     "retirement": {"401k", "pension", "retirement", "match"},
@@ -50,8 +50,6 @@ def tokenize(text: str) -> set[str]:
 
 def topics_of(text: str) -> set[str]:
     toks = tokenize(text)
-    if "$" in text:
-        toks.add("$")
     return {topic for topic, terms in TOPIC_TERMS.items() if toks & terms}
 
 
@@ -122,6 +120,19 @@ class KnowledgeBase:
         if not self._facts:
             return "(knowledge base is empty)"
         return "\n".join(f"[{f.id}] {self.redact(f.text)}" for f in self._facts)
+
+    def can_answer(self, question: str, threshold: float = 0.45) -> tuple[bool, "Fact | None", float]:
+        """Whether the KB supports answering a question — the same rule the composer uses.
+
+        Shared so the pre-outreach coverage report and the live composer never disagree about
+        what counts as answerable.
+        """
+        hits = self.search(question, k=1)
+        if not hits:
+            return False, None, 0.0
+        fact, score = hits[0]
+        ok = score >= threshold and bool(fact.topics & topics_of(question))
+        return ok, (fact if ok else None), score
 
     def search(self, query: str, k: int = 3) -> list[tuple[Fact, float]]:
         q_topics = topics_of(query)

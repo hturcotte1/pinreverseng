@@ -89,6 +89,16 @@ def say(agent: Autopilot, clock: FakeClock, threads: dict[str, str], who: str, b
 def run(drafts: bool = False, use_claude: bool = False) -> Store:
     agent, store, clock, notifier, threads = build(drafts, use_claude)
 
+    from autopilot.coverage import readiness_report
+    kb = agent._kb(store.jobs["job_be"])
+    rep = readiness_report(kb, clock.now())
+    print(f"--- Pre-outreach KB readiness: {rep['coverage_score']:.0%} answerable, "
+          f"ready={rep['ready_for_outreach']} ---")
+    for gap in rep["gaps"][:4]:
+        print(f"  gap: {gap}")
+    for conflict in rep["conflicts"]:
+        print(f"  conflict: {conflict}")
+
     def approve_all() -> None:
         for item in list(store.outbox.values()):
             if item.status is OutboxStatus.DRAFT:
