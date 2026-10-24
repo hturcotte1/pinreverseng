@@ -137,6 +137,11 @@ def run(drafts: bool = False, use_claude: bool = False) -> Store:
             name = store.candidates[store.cards[item.card_id].candidate_id].name
             print(f"\nTo {name} [{item.kind}]:\n{item.body}")
     print("\n" + render_board(store, "job_be", clock.now()))
+    from autopilot.reports import agent_stats
+    s = agent_stats(store, "job_be")
+    print(f"\n--- AI Agent stats ---\n  sent by agent: {s.sent_by_agent} | meetings booked: {s.meetings_booked}"
+          f" | auto-handled: {s.auto_handled} | open questions: {s.open_questions}"
+          f" | archived: {s.archived_by_reason}")
     alice = store.card_for_thread(threads["alice"])
     print("\n--- Inbox timeline: Alice ---\n" + render_timeline(store, alice))
     print("\n--- Knowledge learned ---")
