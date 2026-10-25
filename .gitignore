@@ -5,3 +5,5 @@ __pycache__/
 build/
 dist/
 .venv/
+demo/dashboard/index.html
+demo/dashboard/*.png

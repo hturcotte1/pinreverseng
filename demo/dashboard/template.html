@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Recruiting Autopilot</title>
+<style>
+  :root{
+    --bg:#0f1117; --panel:#171a23; --panel2:#1e2230; --line:#2a2f3e; --line2:#363c4e;
+    --txt:#e7e9ee; --muted:#9aa3b4; --dim:#6b7280;
+    --accent:#7c6cff; --accent2:#8b7bff; --green:#36c58f; --amber:#f2b04e; --red:#f06a6a;
+    --blue:#56a7f0; --pink:#c77dff;
+    --col:#141722;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--bg);color:var(--txt);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+    font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+  .wrap{width:1280px;margin:0 auto;padding:0 22px}
+  .section{padding:26px 0 8px}
+  h1,h2,h3{margin:0;font-weight:650}
+  .topbar{display:flex;align-items:center;gap:14px;padding:16px 22px;border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg,#141722,#10131b)}
+  .logo{display:flex;align-items:center;gap:10px;font-weight:750;font-size:16px;letter-spacing:.2px}
+  .logo .dot{width:22px;height:22px;border-radius:7px;background:linear-gradient(135deg,var(--accent),var(--pink));
+    display:inline-flex;align-items:center;justify-content:center;font-size:13px}
+  .crumbs{color:var(--muted);font-size:13px}
+  .crumbs b{color:var(--txt);font-weight:600}
+  .spacer{flex:1}
+  .chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:12px;
+    font-weight:600;border:1px solid var(--line2);background:var(--panel2);color:var(--muted)}
+  .chip.ok{color:var(--green);border-color:#1f5e47;background:#10251d}
+  .chip .pulse{width:7px;height:7px;border-radius:50%;background:currentColor;box-shadow:0 0 0 0 currentColor}
+  .sectlabel{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);font-weight:700;margin-bottom:12px}
+  /* board */
+  .board{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+  .colhd{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px;font-weight:650;font-size:13px}
+  .colhd .n{color:var(--dim);font-weight:600}
+  .col{background:var(--col);border:1px solid var(--line);border-radius:12px;padding:9px;min-height:150px}
+  .bar{height:3px;border-radius:3px 3px 0 0;margin:-9px -9px 9px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:11px 11px 10px;margin-bottom:9px;
+    box-shadow:0 1px 0 rgba(0,0,0,.25)}
+  .card:last-child{margin-bottom:0}
+  .cname{font-weight:650;font-size:13.5px;margin-bottom:3px}
+  .act{color:var(--accent2);font-size:12px;margin:5px 0 2px;display:flex;gap:5px}
+  .open{color:var(--muted);font-size:12px;display:flex;gap:5px}
+  .meet{display:flex;align-items:center;gap:7px;background:#14233a;border:1px solid #244066;color:#cfe3ff;
+    border-radius:7px;padding:5px 8px;font-size:11.5px;margin:6px 0 2px;font-weight:600}
+  .meet .cd{margin-left:auto;color:#8fc0ff;font-weight:700}
+  .tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
+  .tag{font-size:10.5px;font-weight:650;padding:2px 7px;border-radius:999px;border:1px solid var(--line2);color:var(--muted)}
+  .tag.risk{color:var(--amber);border-color:#6b4e18;background:#241a08}
+  .tag.obj{color:var(--pink);border-color:#4a2f63;background:#1f1430}
+  .tag.draft{color:var(--amber);border-color:#6b4e18;background:#241a08}
+  .tag.warm{color:var(--green)} .tag.cool{color:var(--blue)}
+  .statusline{font-size:11.5px;color:var(--dim);margin-top:6px}
+  .agentmark{font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.03em}
+  /* inbox */
+  .inboxgrid{display:grid;grid-template-columns:1fr 340px;gap:16px}
+  .thread{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+  .thead{display:flex;align-items:center;gap:11px;padding-bottom:12px;border-bottom:1px solid var(--line);margin-bottom:14px}
+  .avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#3a3f55,#2a2f40);
+    display:flex;align-items:center;justify-content:center;font-weight:700;color:#cdd3e4;font-size:13px}
+  .msg{display:flex;margin:12px 0;gap:10px}
+  .msg.out{flex-direction:row-reverse}
+  .bubble{max-width:74%;padding:9px 12px;border-radius:13px;font-size:13px;white-space:pre-wrap}
+  .msg.in .bubble{background:var(--panel2);border:1px solid var(--line);border-bottom-left-radius:4px}
+  .msg.out .bubble{background:#231f3d;border:1px solid #3a3160;border-bottom-right-radius:4px}
+  .msg.recruiter .bubble{background:#1c2b22;border:1px solid #2c4636}
+  .meta{font-size:10.5px;color:var(--dim);margin-bottom:3px;display:flex;gap:7px;align-items:center}
+  .msg.out .meta{justify-content:flex-end}
+  .byagent{color:var(--accent);font-weight:700;border:1px solid #3a3160;border-radius:5px;padding:0 5px;background:#1a1630}
+  .event{display:flex;justify-content:center;margin:12px 0}
+  .event span{font-size:11px;color:var(--dim);background:var(--col);border:1px solid var(--line);
+    border-radius:999px;padding:3px 11px}
+  .rail{display:flex;flex-direction:column;gap:14px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 15px}
+  .panel h3{font-size:13px;margin-bottom:11px;display:flex;align-items:center;gap:7px}
+  .kv{display:flex;justify-content:space-between;font-size:12.5px;margin:6px 0;color:var(--muted)}
+  .kv b{color:var(--txt);font-weight:600}
+  .fact{font-size:11.5px;font-family:ui-monospace,Menlo,monospace;color:var(--green);background:#10251d;
+    border:1px solid #1f5e47;border-radius:5px;padding:1px 6px;margin-right:4px}
+  .eff{font-size:11.5px;padding:2px 7px;border-radius:6px;margin:3px 4px 0 0;display:inline-block;font-weight:600}
+  .eff.rev{color:#8fc0ff;background:#14233a;border:1px solid #244066}
+  .eff.irr{color:var(--amber);background:#241a08;border:1px solid #6b4e18}
+  .autosend{font-weight:700}.autosend.yes{color:var(--green)}.autosend.no{color:var(--amber)}
+  .meter{height:8px;border-radius:6px;background:var(--panel2);overflow:hidden;border:1px solid var(--line)}
+  .meter > i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--pink))}
+  /* analytics */
+  .grid3{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:16px}
+  .tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+  .tile{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 14px}
+  .tile .num{font-size:26px;font-weight:750;letter-spacing:-.5px}
+  .tile .lbl{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-top:2px;font-weight:650}
+  .funnel .step{display:flex;align-items:center;gap:10px;margin:9px 0}
+  .funnel .nm{width:92px;font-size:12px;color:var(--muted);text-transform:capitalize}
+  .funnel .track{flex:1;height:22px;background:var(--panel2);border-radius:6px;border:1px solid var(--line);overflow:hidden}
+  .funnel .fill{height:100%;background:linear-gradient(90deg,#4a3fb0,#7c6cff);display:flex;align-items:center;
+    padding-left:9px;font-size:11.5px;font-weight:700;color:#fff;min-width:26px}
+  .leak{display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-bottom:1px dashed var(--line)}
+  .leak .r{color:var(--amber);font-weight:600}
+  .tier{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .tierdot{width:12px;height:12px;border-radius:50%;background:var(--green);box-shadow:0 0 12px var(--green)}
+  .tiername{font-weight:750;font-size:16px}
+  .q{font-size:12px;color:var(--muted);padding:6px 0;border-bottom:1px dashed var(--line);display:flex;gap:7px}
+  .foot{color:var(--dim);font-size:11px;padding:16px 0 26px;text-align:center}
+  .warn{color:var(--amber)}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="logo"><span class="dot">✦</span> Recruiting Autopilot</div>
+  <span class="crumbs" id="crumbs"></span>
+  <span class="spacer"></span>
+  <span class="chip ok" id="govchip"><span class="pulse"></span><span id="govtxt"></span></span>
+</div>
+
+<div class="wrap">
+  <div class="section">
+    <div class="sectlabel">Pipeline &mdash; every reply handled automatically</div>
+    <div class="board" id="board"></div>
+  </div>
+
+  <div class="section">
+    <div class="sectlabel">Inbox &mdash; one candidate, with the agent's reasoning</div>
+    <div class="inboxgrid">
+      <div class="thread" id="thread"></div>
+      <div class="rail" id="rail"></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="sectlabel">Analytics &mdash; funnel, leaks, knowledge &amp; autonomy</div>
+    <div class="tiles" id="tiles"></div>
+    <div class="grid3">
+      <div class="panel funnel" id="funnel"></div>
+      <div class="panel" id="leaks"></div>
+      <div class="panel" id="rightcol"></div>
+    </div>
+  </div>
+  <div class="foot">Clean-room reference implementation &bull; deterministic offline brain &bull; demo data, not a real company</div>
+</div>
+
+<script>
+const DATA = __DATA__;
+const $ = (h)=>{const d=document.createElement('div');d.innerHTML=h;return d.firstElementChild;};
+const esc = (s)=>(s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+
+// topbar
+document.getElementById('crumbs').innerHTML =
+  `<b>${esc(DATA.job.company)}</b> &rsaquo; ${esc(DATA.job.title)} &rsaquo; ${esc(DATA.job.recruiter)}`;
+document.getElementById('govtxt').textContent = 'Autonomy: '+DATA.governor.tier.replace('_',' ');
+
+// board
+const STAGES=['Replied','Qualifying','Interviewing','Archived','Hired'];
+const BARCOL={Replied:'#56a7f0',Qualifying:'#c77dff',Interviewing:'#7c6cff',Archived:'#6b7280',Hired:'#36c58f'};
+const now=new Date(DATA.now||'2026-10-26T13:00:00Z');
+function countdown(iso){const d=(new Date(iso)-now)/36e5;if(d<0)return'now';if(d<24)return'in '+Math.round(d)+'h';return'in '+Math.round(d/24)+'d';}
+const board=document.getElementById('board');
+STAGES.forEach(st=>{
+  const cards=DATA.cards.filter(c=>c.stage===st);
+  const col=$(`<div><div class="colhd"><span>${st}</span><span class="n">${cards.length}</span></div>
+    <div class="col"><div class="bar" style="background:${BARCOL[st]}"></div></div></div>`);
+  const body=col.querySelector('.col');
+  cards.forEach(c=>{
+    let h=`<div class="card"><div class="cname">${esc(c.candidate)}</div>`;
+    if(c.meeting){h+=`<div class="meet">📅 ${esc(c.meeting.label)}<span class="cd">${countdown(c.meeting.start)}</span></div>`;}
+    else if(c.interview_status){h+=`<div class="statusline">${esc(c.interview_status)}</div>`;}
+    if(c.latest_activity){const dr=c.latest_activity.startsWith('Draft ready');
+      h+=`<div class="act">✦ ${esc(c.latest_activity.replace('Draft ready: ','').replace(/^./,x=>x.toUpperCase()))}${dr?' <span class="tag draft">draft</span>':''}</div>`;}
+    if(c.open_item){h+=`<div class="open">💬 ${esc(c.open_item)}</div>`;}
+    if(c.archive_reason){h+=`<div class="statusline">reason: ${esc(c.archive_reason)}</div>`;}
+    let tags='';
+    if(c.at_risk)tags+=`<span class="tag risk">⚠ at risk${c.at_risk_reason?' · '+esc(c.at_risk_reason):''}</span>`;
+    (c.objections||[]).forEach(o=>tags+=`<span class="tag obj">${esc(o.replace(/_/g,' '))}</span>`);
+    if(c.sentiment&&c.sentiment!=='steady')tags+=`<span class="tag ${c.sentiment==='warming'?'warm':'cool'}">${c.sentiment}</span>`;
+    if(tags)h+=`<div class="tags">${tags}</div>`;
+    h+='</div>';
+    body.appendChild($(h));
+  });
+  board.appendChild(col);
+});
+
+// inbox thread
+const A=DATA.alice, thread=document.getElementById('thread');
+thread.appendChild($(`<div class="thead"><div class="avatar">${esc(A.name.split(' ').map(x=>x[0]).join(''))}</div>
+  <div><div style="font-weight:650">${esc(A.name)}</div><div class="crumbs">${esc(DATA.job.title)}</div></div></div>`));
+A.timeline.forEach(t=>{
+  if(t.type==='event'){thread.appendChild($(`<div class="event"><span>${esc(t.text)}</span></div>`));return;}
+  const side=t.role==='candidate'?'in':'out';
+  const who=t.role==='candidate'?A.name:(t.sent_by_agent?'Autopilot':DATA.job.recruiter);
+  const tag=t.sent_by_agent?'<span class="byagent">Sent by agent</span>':'';
+  thread.appendChild($(`<div class="msg ${side} ${t.role}">
+    <div><div class="meta">${esc(who)} ${tag}</div><div class="bubble">${esc(t.body)}</div></div></div>`));
+});
+
+// rail: signals + flight plan
+const rail=document.getElementById('rail');
+rail.appendChild($(`<div class="panel"><h3>🧭 Candidate signals</h3>
+  <div class="kv">Interest<b>interested</b></div>
+  <div class="kv">Sentiment<b>${esc(A.sentiment)}</b></div>
+  <div class="kv">At risk<b>${A.at_risk?'yes':'no'}</b></div>
+  <div class="kv">Objections<b>${(A.objections&&A.objections.length)?A.objections.join(', '):'none'}</b></div></div>`));
+const _score=p=>(p.cited_facts||[]).length+(p.reversible||[]).length+(p.irreversible||[]).length;
+let fp=A.flight_plans[A.flight_plans.length-1];
+for(const p of A.flight_plans){ if(_score(p)>_score(fp)) fp=p; }
+if(fp){
+  let eff='';(fp.reversible||[]).forEach(e=>eff+=`<span class="eff rev">↺ ${esc(e.replace(/_/g,' '))}</span>`);
+  (fp.irreversible||[]).forEach(e=>eff+=`<span class="eff irr">⚠ ${esc(e.replace(/_/g,' '))}</span>`);
+  let facts=(fp.cited_facts||[]).map(f=>`<span class="fact">${esc(f)}</span>`).join('')||'<span class="crumbs">—</span>';
+  rail.appendChild($(`<div class="panel"><h3>🛫 Flight plan &mdash; ${esc(fp.kind)}</h3>
+    <div class="kv">Action<b>${esc(fp.kind)}</b></div>
+    <div class="kv">Decision<b class="autosend ${fp.auto_send?'yes':'no'}">${fp.auto_send?'auto-send':'draft for review'}</b></div>
+    <div class="kv" style="display:block">Cites<div style="margin-top:5px">${facts}</div></div>
+    ${eff?`<div class="kv" style="display:block">Effects<div style="margin-top:5px">${eff}</div></div>`:''}
+    ${(fp.review_reasons&&fp.review_reasons.length)?`<div class="kv" style="display:block;color:var(--amber)">Held because<div style="margin-top:4px">${fp.review_reasons.map(esc).join('<br>')}</div></div>`:''}
+  </div>`));
+}
+rail.appendChild($(`<div class="panel"><h3>💬 Open questions &rarr; Slack</h3>
+  ${DATA.slack.open_questions.slice(0,3).map(q=>`<div class="q">⟶ ${esc(q)}</div>`).join('')||'<div class="crumbs">none</div>'}
+  </div>`));
+
+// analytics tiles
+const s=DATA.stats, f=DATA.funnel.counts;
+const tiles=[['sent by agent',s.sent_by_agent],['meetings booked',s.meetings_booked],
+  ['auto-handled',s.auto_handled],['open questions',s.open_questions]];
+const tw=document.getElementById('tiles');
+tiles.forEach(([l,n])=>tw.appendChild($(`<div class="tile"><div class="num">${n}</div><div class="lbl">${l}</div></div>`)));
+
+// funnel
+const fe=document.getElementById('funnel');fe.appendChild($('<h3>Conversion funnel</h3>'));
+const order=['replied','qualifying','interviewing','booked','interviewed','hired'];
+const base=f.replied||1;
+order.forEach(k=>{const w=Math.max(6,Math.round(100*f[k]/base));
+  fe.appendChild($(`<div class="step"><div class="nm">${k}</div><div class="track"><div class="fill" style="width:${w}%">${f[k]}</div></div></div>`));});
+
+// leaks
+const le=document.getElementById('leaks');le.appendChild($('<h3>Where candidates dropped</h3>'));
+DATA.leaks.forEach(l=>le.appendChild($(`<div class="leak"><span>${esc(l.candidate)} <span class="crumbs">· ${esc(l.stage_before)}</span></span><span class="r">${esc(l.reason)}</span></div>`)));
+if(!DATA.leaks.length)le.appendChild($('<div class="crumbs">none yet</div>'));
+
+// right column: governor + readiness (single innerHTML so multi-root content isn't dropped)
+const rc=document.getElementById('rightcol');
+const rd=DATA.readiness;
+rc.innerHTML=`<h3>Autonomy governor</h3>
+  <div class="tier"><span class="tierdot"></span><span class="tiername">${esc(DATA.governor.tier.replace('_',' '))}</span></div>
+  <div class="kv">Review rate<b>${Math.round(DATA.governor.block_rate*100)}%</b></div>
+  <div class="kv">Decisions<b>${DATA.governor.decisions}</b></div>
+  <div class="kv">Unsubscribes<b>${DATA.governor.unsubscribes}</b></div>
+  <div style="height:1px;background:var(--line);margin:14px 0"></div>
+  <h3>Knowledge base readiness</h3>
+  <div class="kv">Coverage<b>${Math.round(rd.coverage_score*100)}%</b></div>
+  <div class="meter"><i style="width:${Math.round(rd.coverage_score*100)}%"></i></div>
+  ${rd.gaps.length?`<div class="kv" style="display:block;margin-top:9px">Gaps to fill<div class="crumbs" style="margin-top:4px">${rd.gaps.slice(0,2).map(g=>'• '+esc(g.split('—')[0])).join('<br>')}</div></div>`:'<div class="chip ok" style="margin-top:9px">ready for outreach</div>'}
+  ${rd.conflicts.length?`<div class="warn" style="margin-top:6px;font-size:12px">⚠ ${rd.conflicts.length} conflict(s)</div>`:''}`;
+</script>
+</body>
+</html>
